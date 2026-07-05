@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
-import FeaturedItem from "./FeaturedItem";
-
 import { Button, Container, Form, Row, Col, Pagination } from "react-bootstrap";
 
 export default function BadgerMart(props) {
 
     const [feature, setFeature] = useState(null);
     const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
-    
+
     // hard coding for proof of concept
     const madison = [-89.4012, 43.0731]; // lng, lat
     const indianapolis = [-86.1581, 39.7684];
