@@ -1,0 +1,53 @@
+.forecast-columns {
+  display: grid;
+  grid-template-columns: minmax(350px, 700px);
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.forecast-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.forecast-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  border: 1px solid black;
+  padding: 14px 18px;
+  min-height: 56px;
+  width: 100%;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.time-picker {
+  display: flex;
+  gap: 8px;
+}
+
+.time-picker select,
+.button-row button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #bbb;
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
+}
+
+.button-row button {
+  cursor: pointer;
+  background: white;
+}
