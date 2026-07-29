@@ -1,0 +1,4 @@
+I'd say around 20% of the project was AI written. We mainly used it to understand the API and flow of the code as we wrote. WE also used it for some tips on styling and syntax,but it
+was mostly just a search engine. I believe one function was AI written as well as some of the css styling.
+
+Elle spent her hours on the framework (finding the API, understanding it, building out the overall logic that we use, etc.) and Jordan worked on adding bootstrap components, modularization, error handling, and removing some of the hard coding from testing

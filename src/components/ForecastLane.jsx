@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button, Container, Form, Row, Col, Pagination } from "react-bootstrap";
 import "./ForecastLane.css";
+import ForecastCard from "./ForecastCard";
+import weatherCodes from "../data/WeatherCodes";
+import RouteCard from "./RouteCard"
 
 export default function ForecastLane(props) {
 
@@ -8,41 +11,18 @@ export default function ForecastLane(props) {
     const [forecastEntries, setForecastEntries] = useState([]);
     const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
-    const weatherCodes = {
-        0: { text: "Clear"},
-        1: { text: "Mainly Clear"},
-        2: { text: "Partly Cloudy"},
-        3: { text: "Overcast"},
-        45: { text: "Fog"},
-        48: { text: "Fog"},
-        51: { text: "Light Drizzle"},
-        56: { text: "Freezing Drizzle"},
-        57: { text: "Freezing Drizzle"},
-        61: { text: "Light Rain"},
-        63: { text: "Moderate Rain"},
-        65: { text: "Heavy Rain"},
-        66: { text: "Freezing Rain"},
-        67: { text: "Freezing Rain"},
-        71: { text: "Light Snow"},
-        73: { text: "Moderate Snow"},
-        75: { text: "Heavy Snow"},
-        77: { text: "Snow Grains"},
-        80: { text: "Light Rain Showers"},
-        81: { text: "Moderate Rain Showers"},
-        82: { text: "Heavy Rain Showers"},
-        85: { text: "Snow Showers"},
-        86: { text: "Snow Showers"},
-        95: { text: "Thunderstorm"},
-        96: { text: "Thunderstorm with hail"},
-        99: { text: "Thunderstorm with hail"}
-    };
-
     // start times
+    const now = new Date();
     const hours = Array.from({ length: 12 }, (_, i) => i + 1);
     const minutes = Array.from({ length: 12 }, (_, i) => i * 5);
-    const [hour, setHour] = useState(1);
+    const [inputInterval,setInterval] = useState(30)
+    const [hour, setHour] = useState((now.getHours()%12) + 1);
     const [minute, setMinute] = useState(0);
-    const [ampm, setAmpm] = useState("am");
+    const [ampm, setAmpm] = useState(now.getHours() >= 12 ? "pm" : "am");
+    const [startLocation, setStartLocation] = useState("");
+    const [finalLocation, setFinalLocation] = useState("");
+    const [isLoaded, setIsLoaded] = useState(false)
+    const[isLoading,setIsLoading] = useState(false)
 
     // hard coding for proof of concept
     const madison = [-89.4012, 43.0731]; // lng, lat
@@ -50,6 +30,7 @@ export default function ForecastLane(props) {
 
     async function getRoute(event) {
         event.preventDefault();
+        
 
         if (document.getElementById("startLocation").value === "" || document.getElementById("finalLocation").value === ""){
             alert("Please enter a starting address and final destination!")
@@ -59,12 +40,27 @@ export default function ForecastLane(props) {
         const startAdd = await geocode(document.getElementById("startLocation").value);
         const finalAdd = await geocode(document.getElementById("finalLocation").value);
 
-        // const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startAdd[0]},${startAdd[1]};${finalAdd[0]},${finalAdd[1]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+        if (startAdd === "NoAddress") {
+            alert("Unable to find starting address")
+            return
+        } else if (finalAdd === "NoAddress") {
+            alert("Unable to find destination")
+            return
+        }
+        await setIsLoading(true)
+        const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startAdd[0]},${startAdd[1]};${finalAdd[0]},${finalAdd[1]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
 
-        const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${madison[0]},${madison[1]};${indianapolis[0]},${indianapolis[1]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`
+    
 
         const response = await fetch(url);
         const data = await response.json();
+
+        console.log(data)
+
+        if (data.code === "NoRoute") {
+            alert("Unable to find a Route")
+            return
+        }
 
         const route = data.routes[0];
 
@@ -74,30 +70,52 @@ export default function ForecastLane(props) {
             properties: {}
         });
 
-        const points = await getWeatherPoints(route, 60);
+        const points = await getWeatherPoints(route, inputInterval); //todo: use input for interval
 
 
         const pointsWithNames = await Promise.all(
         points.map(async point => ({
             ...point,
             cityState: await reverseGeocode(point.lng, point.lat),
-            weather: calculateWeather(point)
+            weather: getWeatherText(point,getWeatherIndex(point)),
+            icon: getWeatherIcon(point,getWeatherIndex(point)),
+            time: calculateCurrentTime(point.secondsFromStart)
         }))
         );
 
         setForecastEntries(pointsWithNames);
+        setIsLoaded(true)
+        setIsLoading(false)
     }
 
-    function calculateWeather(data){
+    function getWeatherText(data,index){
 
         const secondsFromStart = data.secondsFromStart;
         // calculate the arrive at time based on the secondsFromStart and hour + minutes
 
         // hardcoded currently to be the first weather code. need to calculate the weather code based on seconds from
-        console.log(data.weatherData.hourly.weather_code[0])
+        //console.log("GET TEXXXXTTTT!!!")
+        //console.log(data)
+        //console.log(data.weatherData.hourly.weather_code[0])
 
-        return weatherCodes[data.weatherData.hourly.weather_code[0]].text
+        return weatherCodes[data.weatherData.hourly.weather_code[index]].text
     }
+
+    function getWeatherIcon(data,index){
+
+        const secondsFromStart = data.secondsFromStart;
+        // calculate the arrive at time based on the secondsFromStart and hour + minutes
+
+        // hardcoded currently to be the first weather code. need to calculate the weather code based on seconds from
+        //console.log(data.weatherData.hourly.weather_code[0])
+
+        return weatherCodes[data.weatherData.hourly.weather_code[index]].icon
+    }
+
+    function getWeatherIndex(point) {
+        console.log("yo yo: ", Math.round(point.secondsFromStart / 3600))
+        return Math.round(point.secondsFromStart / 3600)
+}
 
 
     async function getWeatherPoints(route, intervalMinutes = 60) {
@@ -111,8 +129,11 @@ export default function ForecastLane(props) {
         const weatherPoints = [];
 
         for (let i = 0; i < numPoints; i++) {
-            console.log(i)
-            const fraction = i / (numPoints - 1);
+            const secondsFromStart = i * intervalSeconds;
+
+            // don't go past the end of the route
+            const fraction = Math.min(secondsFromStart / durationSeconds, 1);
+
             const index = Math.floor(fraction * (coords.length - 1));
 
             const [lng, lat] = coords[index];
@@ -123,13 +144,13 @@ export default function ForecastLane(props) {
             weatherPoints.push({
             lat,
             lng,
-            secondsFromStart: durationSeconds * fraction,
+            secondsFromStart: secondsFromStart,
             weatherData
             });
         }
 
-        console.log("Weather Points")
-        console.log(weatherPoints)
+        //console.log("Weather Points")
+        //console.log(weatherPoints)
 
         return weatherPoints;
     }
@@ -167,6 +188,7 @@ export default function ForecastLane(props) {
     }
 
     async function geocode(address) {
+        console.log("token: ",MAPBOX_TOKEN)
         const url =
             `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json` +
             `?access_token=${MAPBOX_TOKEN}`;
@@ -175,7 +197,8 @@ export default function ForecastLane(props) {
         const data = await response.json();
 
         if (data.features.length === 0) {
-            throw new Error("Address not found");
+            //throw new Error("Address not found");
+            return "NoAddress"
         }
 
         return data.features[0].center;
@@ -186,8 +209,55 @@ export default function ForecastLane(props) {
     }
 
     function resetFields(){
+        document.getElementById("startLocation").value = "";
+        document.getElementById("finalLocation").value = "";
 
+        const now = new Date();
+        const hours = Array.from({ length: 12 }, (_, i) => i + 1);
+        const minutes = Array.from({ length: 12 }, (_, i) => i * 5);
+        setHour((now.getHours()%12) + 1);
+        setMinute(0)
+        setAmpm(now.getHours() >= 12 ? "pm" : "am");
+
+        setForecastEntries([]);
+        setFeature(null);
     }
+
+    function calculateCurrentTime(secondsFromStart) {
+    let totalMinutes = Math.floor(secondsFromStart / 60);
+
+    let startHour = hour;
+    let startMinute = minute;
+
+    // convert starting time to 24-hour format
+    if (ampm === "pm" && startHour !== 12) {
+        startHour += 12;
+    }
+
+    if (ampm === "am" && startHour === 12) {
+        startHour = 0;
+    }
+
+    // add travel time
+    let totalStartMinutes = startHour * 60 + startMinute;
+    let arrivalMinutes = totalStartMinutes + totalMinutes;
+
+    // handle days rolling over
+    arrivalMinutes = arrivalMinutes % (24 * 60);
+
+    let arrivalHour = Math.floor(arrivalMinutes / 60);
+    let arrivalMinute = arrivalMinutes % 60;
+
+    // convert back to 12 hour format
+    let displayAmPm = arrivalHour >= 12 ? "PM" : "AM";
+
+    arrivalHour = arrivalHour % 12;
+    if (arrivalHour === 0) {
+        arrivalHour = 12;
+    }
+
+    return `${arrivalHour}:${String(arrivalMinute).padStart(2, "0")} ${displayAmPm}`;
+}
 
     return <div>
         <h1>Forecast Lane</h1>
@@ -224,6 +294,12 @@ export default function ForecastLane(props) {
             <option value="am">AM</option>
             <option value="pm">PM</option>
         </select>
+        <select value={inputInterval} onChange={(e) => setInterval(e.target.value)}>
+            <option value = {15} >15 minutes</option>
+            <option value={30}>30 minutes</option>
+            <option value={45}>45 minutes</option>
+            <option value={60}>60 minutes</option>
+        </select>
         </div>
 
         <div className="button-row">
@@ -232,24 +308,12 @@ export default function ForecastLane(props) {
             <button onClick={resetFields}>Reset</button>
         </div>
         </div>
-
-        <div className="forecast-columns">
-            <div className="forecast-column">
-                {forecastEntries.map((entry, index) => (
-                    <div className="forecast-card" key={index}>
-                    <span>
-                        Stop {index + 1}: {entry.cityState}
-                    </span>
-                    <span>
-                        {Math.round(entry.secondsFromStart / 60)} min
-                    </span>
-                    <span>
-                        {entry.weather}
-                    </span>
-                    </div>
-                ))}
-            </div>
-        </div>
+        {!isLoaded || !isLoading ? (
+        <RouteCard
+            forecastEntries={forecastEntries}/>
+    ) : (
+        <p className="loading-text">Loading Forecast ...</p>
+    )}
     </div>
 
     
