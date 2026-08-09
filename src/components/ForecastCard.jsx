@@ -7,39 +7,49 @@ import { Card,Button } from "react-bootstrap";
 export default function ForecastCard(props) {
 
 
+    // check here if its poor weather?
+    // or in props determine if its night or day and include that?
+
     console.log(props)
+    console.log(props.severity)
     return (
     <Card
-        style={{
-            margin: "0.5rem",
-            padding: "1rem",
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderRadius: "12px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
-        }}
+        className={`forecast-result-card forecast-result-card--${props.severity}`}
     >
-        <div>
-            <h5 style={{ margin: 0 }}>
-                {props.cityState}
-            </h5>
+        <div className="forecast-card">
+
+        {/* // do an "is daytime" guy here */}
+        <div className="forecast-weather-icon">
+        {props.icon}
         </div>
 
-        <div style={{ textAlign: "center" }}>
-            <p style={{ margin: 0, fontSize: "1.1rem" }}>
-                {props.weather}
-            </p>
+        <div className="forecast-details">
+        <div className="forecast-condition">
+            {props.weather}
         </div>
 
-        <div style={{ fontSize: "2.5rem" }}>
-            {props.icon}
+        <div className="forecast-location">
+            {props.cityState}
         </div>
-        <div style={{ fontSize: "2.5rem" }}>
+
+        {props.isPoorWeather && (
+        <div className="forecast-warning">
+          <span className="forecast-warning-icon">▲</span>
+          Poor driving conditions
+        </div>
+        )}
+
+
+        </div>
+
+        <div className="forecast-time-block">
+        <div className="forecast-time">
             {props.time}
         </div>
-    </Card>
+        </div>
+
+    </div>
+    </Card> 
 );
 }
 

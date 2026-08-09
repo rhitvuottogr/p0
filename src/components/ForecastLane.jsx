@@ -1,24 +1,37 @@
 import { useState, useEffect } from "react";
-import { Button, Container, Form, Row, Col, Pagination } from "react-bootstrap";
+import { Button, Container, Form, Row, Col, Pagination, Image } from "react-bootstrap";
 import "./ForecastLane.css";
 import ForecastCard from "./ForecastCard";
 import weatherCodes from "../data/WeatherCodes";
 import RouteCard from "./RouteCard"
+import ForecastDaySelector from "./ForecastDaySelector";
 
 export default function ForecastLane(props) {
 
     const [feature, setFeature] = useState(null);
     const [forecastEntries, setForecastEntries] = useState([]);
     const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+    // hardcoded token for testing
 
-    // start times
-    const now = new Date();
-    const hours = Array.from({ length: 12 }, (_, i) => i + 1);
-    const minutes = Array.from({ length: 12 }, (_, i) => i * 5);
-    const [inputInterval,setInterval] = useState(30)
-    const [hour, setHour] = useState((now.getHours()%12) + 1);
-    const [minute, setMinute] = useState(0);
-    const [ampm, setAmpm] = useState(now.getHours() >= 12 ? "pm" : "am");
+    const [inputInterval, setInterval] = useState(30);
+
+    const getTodayValue = () => {
+    return new Date().toISOString().split("T")[0];
+    };
+
+    const [selectedDate, setSelectedDate] = useState(getTodayValue());
+
+    const getCurrentTimeValue = () => {
+        const current = new Date();
+
+        const hour = String(current.getHours()).padStart(2, "0");
+        const minute = String(current.getMinutes()).padStart(2, "0");
+
+        return `${hour}:${minute}`;
+    };
+
+    const [departureTime, setDepartureTime] = useState(getCurrentTimeValue());
+
     const [startLocation, setStartLocation] = useState("");
     const [finalLocation, setFinalLocation] = useState("");
     const [isLoaded, setIsLoaded] = useState(false)
@@ -29,16 +42,19 @@ export default function ForecastLane(props) {
     const indianapolis = [-86.1581, 39.7684];
 
     async function getRoute(event) {
-        event.preventDefault();
-        
+        event.preventDefault();        
 
-        if (document.getElementById("startLocation").value === "" || document.getElementById("finalLocation").value === ""){
-            alert("Please enter a starting address and final destination!")
-            return
+        if (
+            startLocation.trim() === "" ||
+            finalLocation.trim() === ""
+        ) {
+            alert("Please enter a starting address and final destination!");
+            return;
         }
 
-        const startAdd = await geocode(document.getElementById("startLocation").value);
-        const finalAdd = await geocode(document.getElementById("finalLocation").value);
+        const startAdd = await geocode(startLocation);
+        const finalAdd = await geocode(finalLocation);
+
 
         if (startAdd === "NoAddress") {
             alert("Unable to find starting address")
@@ -79,7 +95,8 @@ export default function ForecastLane(props) {
             cityState: await reverseGeocode(point.lng, point.lat),
             weather: getWeatherText(point,getWeatherIndex(point)),
             icon: getWeatherIcon(point,getWeatherIndex(point)),
-            time: calculateCurrentTime(point.secondsFromStart)
+            time: calculateCurrentTime(point.secondsFromStart),
+            severity: getWeatherSeverity(point,getWeatherIndex(point))
         }))
         );
 
@@ -115,8 +132,15 @@ export default function ForecastLane(props) {
     function getWeatherIndex(point) {
         console.log("yo yo: ", Math.round(point.secondsFromStart / 3600))
         return Math.round(point.secondsFromStart / 3600)
-}
+    }
 
+    function getWeatherSeverity(data, index){
+
+        const secondsFromStart = data.secondsFromStart;
+        // copyied from the other guys above
+
+        return weatherCodes[data.weatherData.hourly.weather_code[index]].severity
+    }
 
     async function getWeatherPoints(route, intervalMinutes = 60) {
         const coords = route.geometry.coordinates;
@@ -212,101 +236,263 @@ export default function ForecastLane(props) {
         document.getElementById("startLocation").value = "";
         document.getElementById("finalLocation").value = "";
 
-        const now = new Date();
-        const hours = Array.from({ length: 12 }, (_, i) => i + 1);
-        const minutes = Array.from({ length: 12 }, (_, i) => i * 5);
-        setHour((now.getHours()%12) + 1);
-        setMinute(0)
-        setAmpm(now.getHours() >= 12 ? "pm" : "am");
+        // const now = new Date();
+        // const hours = Array.from({ length: 12 }, (_, i) => i + 1);
+        // const minutes = Array.from({ length: 12 }, (_, i) => i * 5);
+        // setHour((now.getHours()%12) + 1);
+        // setMinute(0)
+        // setAmpm(now.getHours() >= 12 ? "pm" : "am");
+
+        setDepartureTime(getCurrentTimeValue());
+        setInterval(30);
 
         setForecastEntries([]);
         setFeature(null);
     }
 
+//     function calculateCurrentTime(secondsFromStart) {
+//     let totalMinutes = Math.floor(secondsFromStart / 60);
+
+//     let startHour = hour;
+//     let startMinute = minute;
+
+//     // convert starting time to 24-hour format
+//     if (ampm === "pm" && startHour !== 12) {
+//         startHour += 12;
+//     }
+
+//     if (ampm === "am" && startHour === 12) {
+//         startHour = 0;
+//     }
+
+//     // add travel time
+//     let totalStartMinutes = startHour * 60 + startMinute;
+//     let arrivalMinutes = totalStartMinutes + totalMinutes;
+
+//     // handle days rolling over
+//     arrivalMinutes = arrivalMinutes % (24 * 60);
+
+//     let arrivalHour = Math.floor(arrivalMinutes / 60);
+//     let arrivalMinute = arrivalMinutes % 60;
+
+//     // convert back to 12 hour format
+//     let displayAmPm = arrivalHour >= 12 ? "PM" : "AM";
+
+//     arrivalHour = arrivalHour % 12;
+//     if (arrivalHour === 0) {
+//         arrivalHour = 12;
+//     }
+
+//     return `${arrivalHour}:${String(arrivalMinute).padStart(2, "0")} ${displayAmPm}`;
+// }
+
     function calculateCurrentTime(secondsFromStart) {
-    let totalMinutes = Math.floor(secondsFromStart / 60);
 
-    let startHour = hour;
-    let startMinute = minute;
+        const [startHour, startMinute] = departureTime
+            .split(":")
+            .map(Number);
 
-    // convert starting time to 24-hour format
-    if (ampm === "pm" && startHour !== 12) {
-        startHour += 12;
+        const travelMinutes = Math.floor(secondsFromStart / 60);
+
+        let totalStartMinutes =
+            startHour * 60 + startMinute;
+
+        let arrivalMinutes =
+            totalStartMinutes + travelMinutes;
+
+        // Handle going past midnight
+        arrivalMinutes =
+            arrivalMinutes % (24 * 60);
+
+        let arrivalHour =
+            Math.floor(arrivalMinutes / 60);
+
+        const arrivalMinute =
+            arrivalMinutes % 60;
+
+        const displayAmPm =
+            arrivalHour >= 12 ? "PM" : "AM";
+
+        // Convert 24-hour → 12-hour
+        arrivalHour =
+            arrivalHour % 12;
+
+        if (arrivalHour === 0) {
+            arrivalHour = 12;
+        }
+
+        return `${arrivalHour}:${String(arrivalMinute).padStart(2, "0")} ${displayAmPm}`;
     }
-
-    if (ampm === "am" && startHour === 12) {
-        startHour = 0;
-    }
-
-    // add travel time
-    let totalStartMinutes = startHour * 60 + startMinute;
-    let arrivalMinutes = totalStartMinutes + totalMinutes;
-
-    // handle days rolling over
-    arrivalMinutes = arrivalMinutes % (24 * 60);
-
-    let arrivalHour = Math.floor(arrivalMinutes / 60);
-    let arrivalMinute = arrivalMinutes % 60;
-
-    // convert back to 12 hour format
-    let displayAmPm = arrivalHour >= 12 ? "PM" : "AM";
-
-    arrivalHour = arrivalHour % 12;
-    if (arrivalHour === 0) {
-        arrivalHour = 12;
-    }
-
-    return `${arrivalHour}:${String(arrivalMinute).padStart(2, "0")} ${displayAmPm}`;
-}
 
     return <div>
-        <h1>Forecast Lane</h1>
-        <Form>
-            <Form.Label htmlFor="startLocation">Starting Address</Form.Label>
-            <Form.Control id="startLocation"/>
-            <Form.Label htmlFor="finalLocation">Destination</Form.Label>
-            <Form.Control id="finalLocation"/>
-            <br />
-        </Form>
-
-
-        <div className="controls">
-        <div className="time-picker">
-        <select value={hour} onChange={(e) => setHour(Number(e.target.value))}>
-            {hours.map(hour => (
-            <option key={hour} value={hour}>
-                {hour}
-            </option>
-            ))}
-        </select>
-
-        <span>:</span>
-
-        <select value={minute} onChange={(e) => setMinute(Number(e.target.value))}>
-            {minutes.map(minute => (
-            <option key={minute} value={minute}>
-                {String(minute).padStart(2, "0")}
-            </option>
-            ))}
-        </select>
-
-        <select value={ampm} onChange={(e) => setAmpm(e.target.value)}>
-            <option value="am">AM</option>
-            <option value="pm">PM</option>
-        </select>
-        <select value={inputInterval} onChange={(e) => setInterval(e.target.value)}>
-            <option value = {15} >15 minutes</option>
-            <option value={30}>30 minutes</option>
-            <option value={45}>45 minutes</option>
-            <option value={60}>60 minutes</option>
-        </select>
+        <div className="route-radar-header">
+       <div className="route-radar-icon-wrap">
+        <img
+            src={`${import.meta.env.BASE_URL}header_icon.png`}
+            alt="header_icon"
+            className="route-radar-icon"
+        />
         </div>
 
-        <div className="button-row">
-            <button onClick={addTimes}>Add A New Time</button>
-            <button onClick={getRoute}>Let's Go!</button>
-            <button onClick={resetFields}>Reset</button>
+        <div className="route-radar-text">
+            <h1>Route Radar</h1>
+            <h2>Know Your Route Before You Go.</h2>
         </div>
+        </div>
+        <div className="forecast-form-card">
+    <Form className="route-form">
+      <div className="address-row">
+
+    {/* Starting Address */}
+    <Form.Group className="route-field">
+        <Form.Label htmlFor="startLocation">
+        Starting Address
+        </Form.Label>
+
+        <div className="route-input-wrapper">
+        <div className="route-input-icon">
+            <img
+            src="/p0/starting_icon.png"
+            alt="starting_icon"
+            />
+        </div>
+
+        <Form.Control
+            id="startLocation"
+            className="route-input"
+            placeholder="Enter starting address"
+            value={startLocation}
+            onChange={(e) => setStartLocation(e.target.value)}
+        />
+
+        <button
+            type="button"
+            className="route-clear-button"
+            aria-label="Clear starting address"
+            onClick={() => {
+                setStartLocation("")}
+            }
+        >
+            ×
+        </button>
+        </div>
+    </Form.Group>
+
+    {/* Destination */}
+    <Form.Group className="route-field">
+        <Form.Label htmlFor="finalLocation">
+        Destination
+        </Form.Label>
+
+        <div className="route-input-wrapper">
+        <div className="route-input-icon">
+            <img
+            src="/p0/dest_icon.png"
+            alt="dest_icon"
+            />
+        </div>
+
+        <Form.Control
+            id="finalLocation"
+            className="route-input"
+            placeholder="Enter destination"
+            value={finalLocation}
+            onChange={(e) => setFinalLocation(e.target.value)}
+        />
+
+        <button
+            type="button"
+            className="route-clear-button"
+            aria-label="Clear destination"
+        >
+            ×
+        </button>
+        </div>
+    </Form.Group>
+    </div>
+</Form>
+
+    <div className="time-section">
+
+        <div className="time-section-header">
+            <span className="time-icon">◷</span>
+            <span>Trip Timing</span>
+        </div>
+
+        <ForecastDaySelector
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+        />
+
+        <div className="time-picker-row">
+
+            {/* Departure Time */}
+            <div className="time-field-group">
+                <label htmlFor="departureTime">
+                    Departure Time
+                </label>
+
+                <input
+                    id="departureTime"
+                    type="time"
+                    step="300"
+                    className="departure-time-input"
+                    value={departureTime}
+                    onChange={(e) => setDepartureTime(e.target.value)}
+                    onPointerDown={(e) => {
+                        if (e.currentTarget.showPicker) {
+                        e.currentTarget.showPicker();
+                        }
+                    }}
+                />
+            </div>
+
+
+            {/* Forecast Interval */}
+            <div className="interval-group">
+                <span className="interval-label">
+                    Forecast Every
+                </span>
+
+                <div className="interval-chips">
+
+                    {[15, 30, 45, 60].map((minutes) => (
+                        <button
+                            key={minutes}
+                            type="button"
+                            className={`interval-chip ${
+                                inputInterval === minutes ? "active" : ""
+                            }`}
+                            onClick={() => setInterval(minutes)}
+                        >
+                            {minutes === 60
+                                ? "1 hour"
+                                : `${minutes} min`}
+                        </button>
+                    ))}
+
+                </div>
+            </div>
+
+        </div>
+
+            <div className="action-buttons">
+            {/* <button className="action-button secondary" onClick={addTimes}>
+                <span>＋</span>
+                Add A New Time
+            </button> */}
+
+            <button className="action-button primary" onClick={getRoute}>
+                <span>➤</span>
+                Let's Go!
+            </button>
+
+            <button className="action-button secondary" onClick={resetFields}>
+                <span>↻</span>
+                Reset
+            </button>
+        </div>
+
         </div>
         {!isLoaded || !isLoading ? (
         <RouteCard
@@ -314,6 +500,7 @@ export default function ForecastLane(props) {
     ) : (
         <p className="loading-text">Loading Forecast ...</p>
     )}
+    </div>
     </div>
 
     

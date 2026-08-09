@@ -9,7 +9,7 @@ export default function RouteCard(props) {
 
     console.log(props)
     return (
-    <Card style={{border: "1px solid transparent"}}>
+    <Card style={{border: "1px solid transparent", background: "transparent"}}>
         <div className="forecast-columns">
                     <div className="forecast-column">
                         {props.forecastEntries.map((entry, index) => (
