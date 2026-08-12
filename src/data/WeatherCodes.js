@@ -1,169 +1,197 @@
 const weatherCodes = {
   0: {
     text: "Clear Sky",
-    icon: "☀️",
+    dayIcon: "☀️",
+    nightIcon: "🌙",
     severity: "normal"
   },
 
   1: {
     text: "Mainly Clear",
-    icon: "🌤️",
+    dayIcon: "🌤️",
+    nightIcon: "🌙",
     severity: "normal"
   },
 
   2: {
     text: "Partly Cloudy",
-    icon: "⛅",
+    dayIcon: "⛅",
+    nightIcon: "☁️",
     severity: "normal"
   },
 
   3: {
     text: "Overcast",
-    icon: "☁️",
+    dayIcon: "☁️",
+    nightIcon: "☁️",
     severity: "normal"
   },
 
   45: {
     text: "Fog",
-    icon: "🌫️",
+    dayIcon: "🌫️",
+    nightIcon: "🌫️",
     severity: "caution"
   },
 
   48: {
     text: "Depositing Rime Fog",
-    icon: "🌫️",
+    dayIcon: "🌫️",
+    nightIcon: "🌫️",
     severity: "poor"
   },
 
   51: {
     text: "Light Drizzle",
-    icon: "🌦️",
+    dayIcon: "🌦️",
+    nightIcon: "🌧️",
     severity: "normal"
   },
 
   53: {
     text: "Moderate Drizzle",
-    icon: "🌦️",
+    dayIcon: "🌦️",
+    nightIcon: "🌧️",
     severity: "caution"
   },
 
   55: {
     text: "Dense Drizzle",
-    icon: "🌧️",
+    dayIcon: "🌧️",
+    nightIcon: "🌧️",
     severity: "caution"
   },
 
   56: {
     text: "Light Freezing Drizzle",
-    icon: "🌧️❄️",
+    dayIcon: "🌧️❄️",
+    nightIcon: "🌧️❄️",
     severity: "poor"
   },
 
   57: {
     text: "Dense Freezing Drizzle",
-    icon: "🌧️❄️",
+    dayIcon: "🌧️❄️",
+    nightIcon: "🌧️❄️",
     severity: "severe"
   },
 
   61: {
     text: "Slight Rain",
-    icon: "🌧️",
+    dayIcon: "🌧️",
+    nightIcon: "🌧️",
     severity: "normal"
   },
 
   63: {
     text: "Moderate Rain",
-    icon: "🌧️",
+    dayIcon: "🌧️",
+    nightIcon: "🌧️",
     severity: "caution"
   },
 
   65: {
     text: "Heavy Rain",
-    icon: "🌧️",
+    dayIcon: "🌧️",
+    nightIcon: "🌧️",
     severity: "poor"
   },
 
   66: {
     text: "Light Freezing Rain",
-    icon: "🌧️❄️",
+    dayIcon: "🌧️❄️",
+    nightIcon: "🌧️❄️",
     severity: "poor"
   },
 
   67: {
     text: "Heavy Freezing Rain",
-    icon: "🌧️❄️",
+    dayIcon: "🌧️❄️",
+    nightIcon: "🌧️❄️",
     severity: "severe"
   },
 
   71: {
     text: "Slight Snowfall",
-    icon: "🌨️",
+    dayIcon: "🌨️",
+    nightIcon: "🌨️",
     severity: "caution"
   },
 
   73: {
     text: "Moderate Snowfall",
-    icon: "🌨️",
+    dayIcon: "🌨️",
+    nightIcon: "🌨️",
     severity: "poor"
   },
 
   75: {
     text: "Heavy Snowfall",
-    icon: "❄️",
+    dayIcon: "❄️",
+    nightIcon: "❄️",
     severity: "severe"
   },
 
   77: {
     text: "Snow Grains",
-    icon: "🌨️",
+    dayIcon: "🌨️",
+    nightIcon: "🌨️",
     severity: "caution"
   },
 
   80: {
     text: "Slight Rain Showers",
-    icon: "🌦️",
+    dayIcon: "🌦️",
+    nightIcon: "🌧️",
     severity: "normal"
   },
 
   81: {
     text: "Moderate Rain Showers",
-    icon: "🌧️",
+    dayIcon: "🌧️",
+    nightIcon: "🌧️",
     severity: "caution"
   },
 
   82: {
     text: "Violent Rain Showers",
-    icon: "⛈️",
+    dayIcon: "⛈️",
+    nightIcon: "⛈️",
     severity: "severe"
   },
 
   85: {
     text: "Slight Snow Showers",
-    icon: "🌨️",
+    dayIcon: "🌨️",
+    nightIcon: "🌨️",
     severity: "caution"
   },
 
   86: {
     text: "Heavy Snow Showers",
-    icon: "❄️",
+    dayIcon: "❄️",
+    nightIcon: "❄️",
     severity: "severe"
   },
 
   95: {
     text: "Thunderstorm",
-    icon: "⛈️",
+    dayIcon: "⛈️",
+    nightIcon: "⛈️",
     severity: "poor"
   },
 
   96: {
     text: "Thunderstorm with Slight Hail",
-    icon: "⛈️",
+    dayIcon: "⛈️",
+    nightIcon: "⛈️",
     severity: "severe"
   },
 
   99: {
     text: "Thunderstorm with Heavy Hail",
-    icon: "⛈️",
+    dayIcon: "⛈️",
+    nightIcon: "⛈️",
     severity: "severe"
   }
 };

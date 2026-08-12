@@ -5,4 +5,8 @@ Elle spent her hours on the framework (finding the API, understanding it, buildi
 
 updates on AI usage:
 - generating the background image (and generating a better ui design to go off of)
-- used for ALOT of the UI changes. 
+- used for ALOT of the UI changes. (Jordan and Elle)
+- used for combing options in the APIs used and finding bugs
+- wrote some helper functions
+
+I'd say about 75% of the second round was AI written. - Elle overhauled the UI and Jordan made missing functional changes along with some styling
