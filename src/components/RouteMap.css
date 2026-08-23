@@ -1,0 +1,440 @@
+/* =========================================================
+   ROUTE MAP SECTION
+========================================================= */
+
+.route-map-section {
+    width: 100%;
+
+    margin: 18px 0 12px;
+
+    padding: 16px;
+
+    background:
+        rgba(255, 255, 255, 0.72);
+
+    border:
+        1px solid
+        rgba(210, 218, 235, 0.85);
+
+    border-radius: 16px;
+
+    box-shadow:
+        0 6px 18px
+        rgba(31, 38, 135, 0.07);
+}
+
+
+/* =========================================================
+   MAP HEADER
+========================================================= */
+
+.route-map-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    gap: 16px;
+
+    margin-bottom: 12px;
+}
+
+.route-map-title {
+    color: #17213a;
+
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.route-map-subtitle {
+    margin-top: 3px;
+
+    color: #8490a8;
+
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   DISTANCE + DURATION
+========================================================= */
+
+.route-map-trip-info {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    flex-shrink: 0;
+
+    padding: 7px 10px;
+
+    color: #0b61f7;
+
+    background:
+        rgba(11, 97, 247, 0.08);
+
+    border:
+        1px solid
+        rgba(11, 97, 247, 0.14);
+
+    border-radius: 20px;
+
+    font-size: 0.78rem;
+    font-weight: 650;
+}
+
+.route-map-info-divider {
+    color: #8ea6c9;
+}
+
+
+/* =========================================================
+   MAP
+========================================================= */
+
+.route-map {
+    position: relative;
+
+    width: 100%;
+    height: 360px;
+
+    overflow: hidden;
+
+    background: #edf2f7;
+
+    border:
+        1px solid
+        #d9e1ef;
+
+    border-radius: 14px;
+}
+
+
+/*
+    Mapbox requires its canvas/container
+    to fill the parent.
+*/
+
+.route-map .mapboxgl-map {
+    width: 100%;
+    height: 100%;
+}
+
+
+/* =========================================================
+   START + DESTINATION MARKERS
+========================================================= */
+
+.route-map-marker {
+    width: 30px;
+    height: 30px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: white;
+
+    border:
+        3px solid
+        white;
+
+    border-radius: 50%;
+
+    box-shadow:
+        0 3px 9px
+        rgba(0, 0, 0, 0.20);
+
+    cursor: pointer;
+}
+
+
+/*
+    Inner dot
+*/
+
+.route-map-marker::before {
+    content: "";
+
+    width: 11px;
+    height: 11px;
+
+    border-radius: 50%;
+}
+
+
+/*
+    START
+
+    Dark navy intentionally avoids
+    matching Route 1/2/3 colors.
+*/
+
+.route-map-marker-start::before {
+    background: #17213a;
+}
+
+
+/*
+    DESTINATION
+*/
+
+.route-map-marker-destination::before {
+    background: #dc2626;
+}
+
+
+/* =========================================================
+   LEGEND
+========================================================= */
+
+.route-map-legend {
+    display: flex;
+    align-items: center;
+
+    gap: 16px;
+
+    flex-wrap: wrap;
+
+    margin-top: 12px;
+}
+
+.route-map-legend-item {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    color: #52617c;
+
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+
+/*
+    Background color is set inline
+    by RouteMap.jsx.
+
+    Route 1 = blue
+    Route 2 = orange
+    Route 3 = green
+*/
+
+.route-map-legend-line {
+    width: 30px;
+    height: 5px;
+
+    display: inline-block;
+
+    flex-shrink: 0;
+
+    border-radius: 99px;
+}
+
+
+/*
+    Recommendation is shown through
+    thickness, not by changing color.
+*/
+
+.route-map-legend-line.recommended {
+    height: 7px;
+}
+
+
+/* =========================================================
+   RECOMMENDED BADGE
+========================================================= */
+
+.route-map-legend-best {
+    padding: 3px 7px;
+
+    color: #15803d;
+
+    background:
+        rgba(34, 197, 94, 0.10);
+
+    border:
+        1px solid
+        rgba(34, 197, 94, 0.18);
+
+    border-radius: 12px;
+
+    font-size: 0.68rem;
+    font-weight: 700;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   MAPBOX CONTROLS
+========================================================= */
+
+.route-map .mapboxgl-ctrl-group {
+    overflow: hidden;
+
+    border-radius: 9px;
+
+    box-shadow:
+        0 2px 8px
+        rgba(31, 38, 135, 0.14);
+}
+
+.route-map .mapboxgl-ctrl-group button {
+    width: 34px;
+    height: 34px;
+}
+
+
+/* =========================================================
+   POPUPS
+========================================================= */
+
+.route-map .mapboxgl-popup-content {
+    padding: 9px 12px;
+
+    color: #17213a;
+
+    background: white;
+
+    border-radius: 9px;
+
+    font-family: inherit;
+    font-size: 0.8rem;
+
+    box-shadow:
+        0 4px 14px
+        rgba(31, 38, 135, 0.14);
+}
+
+.route-map .mapboxgl-popup-close-button {
+    padding: 3px 6px;
+
+    color: #52617c;
+
+    font-size: 16px;
+}
+
+
+/* =========================================================
+   MAPBOX ATTRIBUTION
+========================================================= */
+
+.route-map .mapboxgl-ctrl-attrib {
+    font-size: 10px;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 700px) {
+
+    .route-map-section {
+        margin-top: 16px;
+
+        padding: 12px;
+
+        border-radius: 14px;
+    }
+
+
+    .route-map-header {
+        flex-direction: column;
+
+        gap: 8px;
+    }
+
+
+    .route-map-trip-info {
+        align-self: flex-start;
+    }
+
+
+    .route-map {
+        height: 245px;
+    }
+
+
+    .route-map-legend {
+        gap:
+            10px
+            14px;
+    }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 420px) {
+
+    .route-map-section {
+        padding: 10px;
+    }
+
+
+    .route-map {
+        height: 220px;
+
+        border-radius: 12px;
+    }
+
+
+    .route-map-title {
+        font-size: 0.95rem;
+    }
+
+
+    .route-map-subtitle {
+        font-size: 0.76rem;
+    }
+
+
+    .route-map-trip-info {
+        font-size: 0.74rem;
+    }
+
+
+    .route-map-legend {
+        margin-top: 10px;
+    }
+}
+
+/* =========================================================
+   INTERMEDIATE STOP MARKERS
+========================================================= */
+
+.route-map-stop-marker {
+    width: 30px;
+    height: 30px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: #17213a;
+
+    background: white;
+
+    border:
+        3px solid
+        #17213a;
+
+    border-radius: 50%;
+
+    box-shadow:
+        0 3px 9px
+        rgba(0, 0, 0, 0.20);
+
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 800;
+
+    cursor: pointer;
+}
