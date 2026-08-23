@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react";
-import { Button, Container, Form, Row, Col, Pagination, Image } from "react-bootstrap";
+import { Form } from "react-bootstrap";
 import "./ForecastLane.css";
-import ForecastCard from "./ForecastCard";
 import weatherCodes from "../data/WeatherCodes";
-import RouteCard from "./RouteCard"
+import RouteCard from "./RouteCard";
 import ForecastDaySelector from "./ForecastDaySelector";
 
 export default function ForecastLane(props) {
 
     const [routes, setRoutes] = useState([]);
     const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
-    // hardcoded token for testing
 
     const [inputInterval, setInterval] = useState(30);
 
@@ -34,237 +32,716 @@ export default function ForecastLane(props) {
 
         return `${hour}:${minute}`;
     };
-    
 
-    const [departureTime, setDepartureTime] = useState(getCurrentTimeValue());
-    
-    const [sessionstartDT, setSessionstartDT] = useState(new Date(`${getTodayValue()}T${getCurrentTimeValue()}:00`));
+    const [departureTime, setDepartureTime] = useState(
+        getCurrentTimeValue()
+    );
+
+    const [sessionstartDT] = useState(
+        new Date(`${getTodayValue()}T${getCurrentTimeValue()}:00`)
+    );
+
     const [startLocation, setStartLocation] = useState("");
     const [finalLocation, setFinalLocation] = useState("");
-    const [isLoaded, setIsLoaded] = useState(false)
-    const[isLoading,setIsLoading] = useState(false)
 
-    // hard coding for proof of concept
-    const madison = [-89.4012, 43.0731]; // lng, lat
-    const indianapolis = [-86.1581, 39.7684];
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
+
+    // ============================================================
+    // AUTOCOMPLETE STATE
+    // ============================================================
+
+    const [startSuggestions, setStartSuggestions] = useState([]);
+    const [finalSuggestions, setFinalSuggestions] = useState([]);
+
+    const [selectedStart, setSelectedStart] = useState(null);
+    const [selectedFinal, setSelectedFinal] = useState(null);
+
+    const [startActiveIndex, setStartActiveIndex] = useState(-1);
+    const [finalActiveIndex, setFinalActiveIndex] = useState(-1);
+
+
+    // ============================================================
+    // DATE / TIME VALIDATION
+    // ============================================================
 
     useEffect(() => {
-        const selectedDT = new Date(`${selectedDate}T${departureTime}:00`);
+
+        const selectedDT = new Date(
+            `${selectedDate}T${departureTime}:00`
+        );
+
         if (selectedDT < sessionstartDT) {
-            alert("Time can't be in the past")
-            setSelectedDate(getTodayValue())
-            setDepartureTime(getCurrentTimeValue())
+
+            alert("Time can't be in the past");
+
+            setSelectedDate(getTodayValue());
+            setDepartureTime(getCurrentTimeValue());
         }
-    },[selectedDate,departureTime])
+
+    }, [selectedDate, departureTime, sessionstartDT]);
+
+
+    // ============================================================
+    // ADDRESS AUTOCOMPLETE
+    // ============================================================
+
+    async function getAddressSuggestions(query) {
+
+        if (query.trim().length < 3) {
+            return [];
+        }
+
+        const url =
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
+            `${encodeURIComponent(query)}.json` +
+            `?access_token=${MAPBOX_TOKEN}` +
+            `&autocomplete=true` +
+            `&types=address` +
+            `&country=us` +
+            `&limit=5`;
+
+        try {
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+
+                console.error(
+                    "Autocomplete request failed:",
+                    response.status,
+                    response.statusText
+                );
+
+                return [];
+            }
+
+            const data = await response.json();
+
+            return data.features || [];
+
+        } catch (error) {
+
+            console.error(
+                "Autocomplete request failed:",
+                error
+            );
+
+            return [];
+        }
+    }
+
+
+    // ============================================================
+    // START ADDRESS AUTOCOMPLETE
+    // ============================================================
+
+    useEffect(() => {
+
+        if (selectedStart) {
+            return;
+        }
+
+        if (startLocation.trim().length < 3) {
+
+            setStartSuggestions([]);
+            setStartActiveIndex(-1);
+
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+
+            const suggestions =
+                await getAddressSuggestions(startLocation);
+
+            setStartSuggestions(suggestions);
+            setStartActiveIndex(-1);
+
+        }, 300);
+
+        return () => clearTimeout(timer);
+
+    }, [startLocation, selectedStart]);
+
+
+    // ============================================================
+    // FINAL ADDRESS AUTOCOMPLETE
+    // ============================================================
+
+    useEffect(() => {
+
+        if (selectedFinal) {
+            return;
+        }
+
+        if (finalLocation.trim().length < 3) {
+
+            setFinalSuggestions([]);
+            setFinalActiveIndex(-1);
+
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+
+            const suggestions =
+                await getAddressSuggestions(finalLocation);
+
+            setFinalSuggestions(suggestions);
+            setFinalActiveIndex(-1);
+
+        }, 300);
+
+        return () => clearTimeout(timer);
+
+    }, [finalLocation, selectedFinal]);
+
+
+    // ============================================================
+    // SELECT AUTOCOMPLETE RESULT
+    // ============================================================
+
+    function selectStartSuggestion(suggestion) {
+
+        setStartLocation(suggestion.place_name);
+        setSelectedStart(suggestion);
+
+        setStartSuggestions([]);
+        setStartActiveIndex(-1);
+    }
+
+
+    function selectFinalSuggestion(suggestion) {
+
+        setFinalLocation(suggestion.place_name);
+        setSelectedFinal(suggestion);
+
+        setFinalSuggestions([]);
+        setFinalActiveIndex(-1);
+    }
+
+
+    // ============================================================
+    // KEYBOARD NAVIGATION
+    // ============================================================
+
+    function handleStartKeyDown(e) {
+
+        if (
+            e.key === "ArrowDown" &&
+            startSuggestions.length > 0
+        ) {
+
+            e.preventDefault();
+
+            setStartActiveIndex(prev =>
+                prev < startSuggestions.length - 1
+                    ? prev + 1
+                    : 0
+            );
+
+            return;
+        }
+
+
+        if (
+            e.key === "ArrowUp" &&
+            startSuggestions.length > 0
+        ) {
+
+            e.preventDefault();
+
+            setStartActiveIndex(prev =>
+                prev > 0
+                    ? prev - 1
+                    : startSuggestions.length - 1
+            );
+
+            return;
+        }
+
+
+        if (e.key === "Enter") {
+
+            if (
+                startSuggestions.length > 0 &&
+                startActiveIndex >= 0
+            ) {
+
+                e.preventDefault();
+
+                selectStartSuggestion(
+                    startSuggestions[startActiveIndex]
+                );
+            }
+
+            /*
+                If nothing is highlighted,
+                DON'T prevent default.
+
+                The form will submit naturally.
+            */
+
+            return;
+        }
+
+
+        if (e.key === "Tab") {
+
+            if (
+                startSuggestions.length > 0 &&
+                startActiveIndex >= 0
+            ) {
+
+                selectStartSuggestion(
+                    startSuggestions[startActiveIndex]
+                );
+            }
+
+            return;
+        }
+
+
+        if (e.key === "Escape") {
+
+            setStartSuggestions([]);
+            setStartActiveIndex(-1);
+        }
+    }
+
+
+    function handleFinalKeyDown(e) {
+
+        if (
+            e.key === "ArrowDown" &&
+            finalSuggestions.length > 0
+        ) {
+
+            e.preventDefault();
+
+            setFinalActiveIndex(prev =>
+                prev < finalSuggestions.length - 1
+                    ? prev + 1
+                    : 0
+            );
+
+            return;
+        }
+
+
+        if (
+            e.key === "ArrowUp" &&
+            finalSuggestions.length > 0
+        ) {
+
+            e.preventDefault();
+
+            setFinalActiveIndex(prev =>
+                prev > 0
+                    ? prev - 1
+                    : finalSuggestions.length - 1
+            );
+
+            return;
+        }
+
+
+        if (e.key === "Enter") {
+
+            if (
+                finalSuggestions.length > 0 &&
+                finalActiveIndex >= 0
+            ) {
+
+                e.preventDefault();
+
+                selectFinalSuggestion(
+                    finalSuggestions[finalActiveIndex]
+                );
+            }
+
+            return;
+        }
+
+
+        if (e.key === "Tab") {
+
+            if (
+                finalSuggestions.length > 0 &&
+                finalActiveIndex >= 0
+            ) {
+
+                selectFinalSuggestion(
+                    finalSuggestions[finalActiveIndex]
+                );
+            }
+
+            return;
+        }
+
+
+        if (e.key === "Escape") {
+
+            setFinalSuggestions([]);
+            setFinalActiveIndex(-1);
+        }
+    }
+
+
+    // ============================================================
+    // ROUTE
+    // ============================================================
 
     async function getRoute(event) {
-        event.preventDefault();        
+
+        event.preventDefault();
 
         if (
             startLocation.trim() === "" ||
             finalLocation.trim() === ""
         ) {
-            alert("Please enter a starting address and final destination!");
+
+            alert(
+                "Please enter a starting address and final destination!"
+            );
+
             return;
         }
-        
-        const startAdd = await geocode(startLocation);
-        const finalAdd = await geocode(finalLocation);
+
+
+        let startAdd;
+        let finalAdd;
+
+
+        if (selectedStart?.center) {
+
+            startAdd = selectedStart.center;
+
+        } else {
+
+            startAdd =
+                await geocode(startLocation);
+        }
+
+
+        if (selectedFinal?.center) {
+
+            finalAdd = selectedFinal.center;
+
+        } else {
+
+            finalAdd =
+                await geocode(finalLocation);
+        }
 
 
         if (startAdd === "NoAddress") {
-            alert("Unable to find starting address")
-            return
+
+            alert("Unable to find starting address");
+            return;
+
         } else if (finalAdd === "NoAddress") {
-            alert("Unable to find destination")
-            return
-        }
-        
-        
-        const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startAdd[0]},${startAdd[1]};${finalAdd[0]},${finalAdd[1]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}&alternatives=true`;
 
-    
+            alert("Unable to find destination");
+            return;
+        }
+
+
+        const url =
+            `https://api.mapbox.com/directions/v5/mapbox/driving/` +
+            `${startAdd[0]},${startAdd[1]};` +
+            `${finalAdd[0]},${finalAdd[1]}` +
+            `?geometries=geojson` +
+            `&overview=full` +
+            `&access_token=${MAPBOX_TOKEN}` +
+            `&alternatives=true`;
+
+
         try {
-        const response = await fetch(url);
-        const data = await response.json();
 
-        console.log(data) 
+            const response = await fetch(url);
+            const data = await response.json();
 
-        if (data.code === "NoRoute") {
-            alert("Unable to find a Route")
-            return
-        }
-        setIsLoading(true)
+            console.log(data);
 
-        const routesWithWeather = await Promise.all(
-        data.routes.map(async (route, routeIndex) => {
 
-        const points = await getWeatherPoints(
-            route,
-            inputInterval
-        );
+            if (data.code === "NoRoute") {
 
-        const pointsWithNames = await Promise.all(
-            points.map(async point => {
+                alert("Unable to find a Route");
+                return;
+            }
 
-                const weatherIndex = getWeatherIndex(point);
 
-                return {
-                    ...point,
+            setIsLoading(true);
 
-                    cityState: await reverseGeocode(
-                        point.lng,
-                        point.lat
-                    ),
 
-                    weather: getWeatherText(
-                        point,
-                        weatherIndex
-                    ),
+            const routesWithWeather =
+                await Promise.all(
 
-                    icon: getWeatherIcon(
-                        point,
-                        weatherIndex
-                    ),
+                    data.routes.map(
+                        async (route, routeIndex) => {
 
-                    time: calculateCurrentTime(
-                        point.secondsFromStart
-                    ),
+                            const points =
+                                await getWeatherPoints(
+                                    route,
+                                    inputInterval
+                                );
 
-                    severity: getWeatherSeverity(
-                        point,
-                        weatherIndex
+
+                            const pointsWithNames =
+                                await Promise.all(
+
+                                    points.map(
+                                        async point => {
+
+                                            const weatherIndex =
+                                                getWeatherIndex(point);
+
+
+                                            return {
+
+                                                ...point,
+
+                                                cityState:
+                                                    await reverseGeocode(
+                                                        point.lng,
+                                                        point.lat
+                                                    ),
+
+                                                weather:
+                                                    getWeatherText(
+                                                        point,
+                                                        weatherIndex
+                                                    ),
+
+                                                icon:
+                                                    getWeatherIcon(
+                                                        point,
+                                                        weatherIndex
+                                                    ),
+
+                                                time:
+                                                    calculateCurrentTime(
+                                                        point.secondsFromStart
+                                                    ),
+
+                                                severity:
+                                                    getWeatherSeverity(
+                                                        point,
+                                                        weatherIndex
+                                                    )
+                                            };
+                                        }
+                                    )
+                                );
+
+
+                            return {
+
+                                ...route,
+
+                                routeNumber:
+                                    routeIndex + 1,
+
+                                forecastEntries:
+                                    pointsWithNames
+                            };
+                        }
                     )
-                };
-            })
-        );
+                );
 
-        return {
-            ...route,
-            routeNumber: routeIndex + 1,
-            forecastEntries: pointsWithNames
-        };
-    })
-);
-        setRoutes(routesWithWeather)
+
+            setRoutes(routesWithWeather);
+
+        } catch (error) {
+
+            console.error(
+                "Unable to retrieve route:",
+                error
+            );
+
+            alert("Unable to retrieve route.");
+
         } finally {
-        
-        setIsLoaded(true)
-        setIsLoading(false)
+
+            setIsLoaded(true);
+            setIsLoading(false);
         }
     }
 
-    function getWeatherText(data,index){
 
-        const secondsFromStart = data.secondsFromStart;
-        // calculate the arrive at time based on the secondsFromStart and hour + minutes
+    // ============================================================
+    // WEATHER
+    // ============================================================
 
-        // hardcoded currently to be the first weather code. need to calculate the weather code based on seconds from
-        //console.log("GET TEXXXXTTTT!!!")
-        //console.log(data)
-        //console.log(data.weatherData.hourly.weather_code[0])
+    function getWeatherText(data, index) {
 
-        return weatherCodes[data.weatherData.hourly.weather_code[index]].text
+        return weatherCodes[
+            data.weatherData.hourly.weather_code[index]
+        ].text;
     }
 
-    function getWeatherIcon(data,index){
 
-        const secondsFromStart = data.secondsFromStart;
-        // calculate the arrive at time based on the secondsFromStart and hour + minutes
+    function getWeatherIcon(data, index) {
 
-        // hardcoded currently to be the first weather code. need to calculate the weather code based on seconds from
-        //console.log(data.weatherData.hourly.weather_code[0])
         if (data.weatherData.hourly.is_day[index]) {
-            return weatherCodes[data.weatherData.hourly.weather_code[index]].dayIcon
+
+            return weatherCodes[
+                data.weatherData.hourly.weather_code[index]
+            ].dayIcon;
         }
 
-        return weatherCodes[data.weatherData.hourly.weather_code[index]].nightIcon
+        return weatherCodes[
+            data.weatherData.hourly.weather_code[index]
+        ].nightIcon;
     }
+
 
     function getWeatherIndex(point) {
-        // The user's selected departure date + time
-    const departureDateTime = new Date(
-        `${selectedDate}T${departureTime}:00`
-    );
 
-    // Add the amount of time spent driving to this point
-    const arrivalTimestamp =
-        departureDateTime.getTime() +
-        point.secondsFromStart * 1000;
+        const departureDateTime =
+            new Date(
+                `${selectedDate}T${departureTime}:00`
+            );
 
-    // Open-Meteo tells us the UTC offset for this location
-    const offsetSeconds =
-        point.weatherData.utc_offset_seconds;
 
-    // Convert the arrival timestamp into the local time
-    // at this particular weather point.
-    const localTimestamp =
-        arrivalTimestamp + offsetSeconds * 1000;
+        const arrivalTimestamp =
+            departureDateTime.getTime() +
+            point.secondsFromStart * 1000;
 
-    const localDate = new Date(localTimestamp);
 
-    const year = localDate.getUTCFullYear();
-    const month = String(localDate.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(localDate.getUTCDate()).padStart(2, "0");
-    const hour = String(localDate.getUTCHours()).padStart(2, "0");
+        const offsetSeconds =
+            point.weatherData.utc_offset_seconds;
 
-    const targetHour = `${year}-${month}-${day}T${hour}:00`;
 
-    const index =
-        point.weatherData.hourly.time.findIndex(
-            time => time === targetHour
-        );
+        const localTimestamp =
+            arrivalTimestamp +
+            offsetSeconds * 1000;
 
-    return index;
+
+        const localDate =
+            new Date(localTimestamp);
+
+
+        const year =
+            localDate.getUTCFullYear();
+
+
+        const month =
+            String(
+                localDate.getUTCMonth() + 1
+            ).padStart(2, "0");
+
+
+        const day =
+            String(
+                localDate.getUTCDate()
+            ).padStart(2, "0");
+
+
+        const hour =
+            String(
+                localDate.getUTCHours()
+            ).padStart(2, "0");
+
+
+        const targetHour =
+            `${year}-${month}-${day}T${hour}:00`;
+
+
+        const index =
+            point.weatherData.hourly.time.findIndex(
+                time => time === targetHour
+            );
+
+
+        return index;
     }
 
-    function getWeatherSeverity(data, index){
 
-        const secondsFromStart = data.secondsFromStart;
-        // copyied from the other guys above
+    function getWeatherSeverity(data, index) {
 
-        return weatherCodes[data.weatherData.hourly.weather_code[index]].severity
+        return weatherCodes[
+            data.weatherData.hourly.weather_code[index]
+        ].severity;
     }
 
-    async function getWeatherPoints(route, intervalMinutes = 60) {
-        const coords = route.geometry.coordinates;
-        const durationSeconds = route.duration;
 
-        const intervalSeconds = intervalMinutes * 60;
+    async function getWeatherPoints(
+        route,
+        intervalMinutes = 60
+    ) {
 
-        const numPoints = Math.ceil(durationSeconds / intervalSeconds) + 1;
+        const coords =
+            route.geometry.coordinates;
+
+        const durationSeconds =
+            route.duration;
+
+        const intervalSeconds =
+            intervalMinutes * 60;
+
+
+        const numPoints =
+            Math.ceil(
+                durationSeconds /
+                intervalSeconds
+            ) + 1;
+
 
         const weatherPoints = [];
 
+
         for (let i = 0; i < numPoints; i++) {
-            const secondsFromStart = i * intervalSeconds;
 
-            // don't go past the end of the route
-            const fraction = Math.min(secondsFromStart / durationSeconds, 1);
+            const secondsFromStart =
+                i * intervalSeconds;
 
-            const index = Math.floor(fraction * (coords.length - 1));
 
-            const [lng, lat] = coords[index];
+            const fraction =
+                Math.min(
+                    secondsFromStart /
+                    durationSeconds,
+                    1
+                );
 
-            // pull the weather data
-            const weatherData = await fetchWeather(lng, lat);
+
+            const index =
+                Math.floor(
+                    fraction *
+                    (coords.length - 1)
+                );
+
+
+            const [lng, lat] =
+                coords[index];
+
+
+            const weatherData =
+                await fetchWeather(
+                    lng,
+                    lat
+                );
+
 
             weatherPoints.push({
-            lat,
-            lng,
-            secondsFromStart: secondsFromStart,
-            weatherData
+
+                lat,
+                lng,
+                secondsFromStart,
+                weatherData
             });
         }
 
-        //console.log("Weather Points")
-        //console.log(weatherPoints)
 
         return weatherPoints;
     }
 
+
     async function fetchWeather(lng, lat) {
+
         const url =
             `https://api.open-meteo.com/v1/forecast` +
             `?latitude=${lat}` +
@@ -273,321 +750,752 @@ export default function ForecastLane(props) {
             `&timezone=auto`;
 
 
-        const response = await fetch(url);
-        const data = await response.json();
+        const response =
+            await fetch(url);
 
-        // console.log("weather");
-        // console.log(data);
+        const data =
+            await response.json();
+
 
         return data;
     }
 
+
+    // ============================================================
+    // REVERSE GEOCODE
+    // ============================================================
+
     async function reverseGeocode(lng, lat) {
+
         const url =
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json` +
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
+            `${lng},${lat}.json` +
             `?types=place,region` +
             `&access_token=${MAPBOX_TOKEN}`;
 
-        const response = await fetch(url);
-        const data = await response.json();
 
-        const city = data.features.find(f => f.place_type.includes("place"));
-        const state = data.features.find(f => f.place_type.includes("region"));
+        const response =
+            await fetch(url);
 
-        return `${city?.text || "Unknown city"}, ${state?.text || "Unknown state"}`;
+        const data =
+            await response.json();
+
+
+        const city =
+            data.features.find(
+                f =>
+                    f.place_type.includes("place")
+            );
+
+
+        const state =
+            data.features.find(
+                f =>
+                    f.place_type.includes("region")
+            );
+
+
+        return `${
+            city?.text || "Unknown city"
+        }, ${
+            state?.text || "Unknown state"
+        }`;
     }
+
+
+    // ============================================================
+    // FINAL ADDRESS VALIDATION
+    // ============================================================
 
     async function geocode(address) {
+
         const url =
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json` +
-            `?access_token=${MAPBOX_TOKEN}`;
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
+            `${encodeURIComponent(address)}.json` +
+            `?access_token=${MAPBOX_TOKEN}` +
+            `&autocomplete=false` +
+            `&country=us` +
+            `&limit=1`;
 
-        const response = await fetch(url);
-        const data = await response.json();
 
-        if (data.features.length === 0) {
-            //throw new Error("Address not found");
-            return "NoAddress"
+        try {
+
+            const response =
+                await fetch(url);
+
+
+            if (!response.ok) {
+
+                console.error(
+                    "Geocoding request failed:",
+                    response.status,
+                    response.statusText
+                );
+
+                return "NoAddress";
+            }
+
+
+            const data =
+                await response.json();
+
+
+            if (
+                !data.features ||
+                data.features.length === 0
+            ) {
+
+                return "NoAddress";
+            }
+
+
+            return data.features[0].center;
+
+        } catch (error) {
+
+            console.error(
+                "Geocoding error:",
+                error
+            );
+
+            return "NoAddress";
         }
-
-        return data.features[0].center;
     }
 
-    function addTimes(){
 
-    }
+    // ============================================================
+    // RESET
+    // ============================================================
 
-    function resetFields(){
+    function resetFields() {
+
         setStartLocation("");
-    setFinalLocation("");
-    setSelectedDate(getTodayValue());
-    setDepartureTime(getCurrentTimeValue());
-    setInterval(30);
-    setRoutes([]);
+        setFinalLocation("");
+
+        setStartSuggestions([]);
+        setFinalSuggestions([]);
+
+        setSelectedStart(null);
+        setSelectedFinal(null);
+
+        setStartActiveIndex(-1);
+        setFinalActiveIndex(-1);
+
+        setSelectedDate(
+            getTodayValue()
+        );
+
+        setDepartureTime(
+            getCurrentTimeValue()
+        );
+
+        setInterval(30);
+
+        setRoutes([]);
     }
 
-//     function calculateCurrentTime(secondsFromStart) {
-//     let totalMinutes = Math.floor(secondsFromStart / 60);
 
-//     let startHour = hour;
-//     let startMinute = minute;
+    // ============================================================
+    // DISPLAY TIME
+    // ============================================================
 
-//     // convert starting time to 24-hour format
-//     if (ampm === "pm" && startHour !== 12) {
-//         startHour += 12;
-//     }
+    function calculateCurrentTime(
+        secondsFromStart
+    ) {
 
-//     if (ampm === "am" && startHour === 12) {
-//         startHour = 0;
-//     }
+        const [
+            startHour,
+            startMinute
+        ] =
+            departureTime
+                .split(":")
+                .map(Number);
 
-//     // add travel time
-//     let totalStartMinutes = startHour * 60 + startMinute;
-//     let arrivalMinutes = totalStartMinutes + totalMinutes;
 
-//     // handle days rolling over
-//     arrivalMinutes = arrivalMinutes % (24 * 60);
+        const travelMinutes =
+            Math.floor(
+                secondsFromStart / 60
+            );
 
-//     let arrivalHour = Math.floor(arrivalMinutes / 60);
-//     let arrivalMinute = arrivalMinutes % 60;
-
-//     // convert back to 12 hour format
-//     let displayAmPm = arrivalHour >= 12 ? "PM" : "AM";
-
-//     arrivalHour = arrivalHour % 12;
-//     if (arrivalHour === 0) {
-//         arrivalHour = 12;
-//     }
-
-//     return `${arrivalHour}:${String(arrivalMinute).padStart(2, "0")} ${displayAmPm}`;
-// }
-
-    function calculateCurrentTime(secondsFromStart) {
-
-        const [startHour, startMinute] = departureTime
-            .split(":")
-            .map(Number);
-
-        const travelMinutes = Math.floor(secondsFromStart / 60);
 
         let totalStartMinutes =
-            startHour * 60 + startMinute;
+            startHour * 60 +
+            startMinute;
+
 
         let arrivalMinutes =
-            totalStartMinutes + travelMinutes;
+            totalStartMinutes +
+            travelMinutes;
 
-        // Handle going past midnight
+
         arrivalMinutes =
-            arrivalMinutes % (24 * 60);
+            arrivalMinutes %
+            (24 * 60);
+
 
         let arrivalHour =
-            Math.floor(arrivalMinutes / 60);
+            Math.floor(
+                arrivalMinutes / 60
+            );
+
 
         const arrivalMinute =
             arrivalMinutes % 60;
 
-        const displayAmPm =
-            arrivalHour >= 12 ? "PM" : "AM";
 
-        // Convert 24-hour → 12-hour
+        const displayAmPm =
+            arrivalHour >= 12
+                ? "PM"
+                : "AM";
+
+
         arrivalHour =
             arrivalHour % 12;
 
+
         if (arrivalHour === 0) {
+
             arrivalHour = 12;
         }
 
-        return `${arrivalHour}:${String(arrivalMinute).padStart(2, "0")} ${displayAmPm}`;
+
+        return `${
+            arrivalHour
+        }:${
+            String(
+                arrivalMinute
+            ).padStart(2, "0")
+        } ${displayAmPm}`;
     }
 
-    return <div>
-        <div className="route-radar-header">
-       <div className="route-radar-icon-wrap">
-        <img
-            src={`${import.meta.env.BASE_URL}header_icon.png`}
-            alt="header_icon"
-            className="route-radar-icon"
-        />
-        </div>
 
-        <div className="route-radar-text">
-            <h1>Route Radar</h1>
-            <h2>Know Your Route Before You Go.</h2>
-        </div>
-        </div>
-        <div className="forecast-form-card">
-    <Form className="route-form">
-      <div className="address-row">
+    // ============================================================
+    // JSX
+    // ============================================================
 
-    {/* Starting Address */}
-    <Form.Group className="route-field">
-        <Form.Label htmlFor="startLocation">
-        Starting Address
-        </Form.Label>
+    return (
 
-        <div className="route-input-wrapper">
-        <div className="route-input-icon">
-            <img
-            src="/p0/starting_icon.png"
-            alt="starting_icon"
-            />
-        </div>
+        <div>
 
-        <Form.Control
-            id="startLocation"
-            className="route-input"
-            placeholder="Enter starting address"
-            value={startLocation}
-            onChange={(e) => setStartLocation(e.target.value)}
-        />
+            <div className="route-radar-header">
 
-        <button
-            type="button"
-            className="route-clear-button"
-            aria-label="Clear starting address"
-            onClick={() => {
-                setStartLocation("")}
-            }
-        >
-            ×
-        </button>
-        </div>
-    </Form.Group>
+                <div className="route-radar-icon-wrap">
 
-    {/* Destination */}
-    <Form.Group className="route-field">
-        <Form.Label htmlFor="finalLocation">
-        Destination
-        </Form.Label>
-
-        <div className="route-input-wrapper">
-        <div className="route-input-icon">
-            <img
-            src="/p0/dest_icon.png"
-            alt="dest_icon"
-            />
-        </div>
-
-        <Form.Control
-            id="finalLocation"
-            className="route-input"
-            placeholder="Enter destination"
-            value={finalLocation}
-            onChange={(e) => setFinalLocation(e.target.value)}
-        />
-
-        <button
-            type="button"
-            className="route-clear-button"
-            aria-label="Clear destination"
-            onClick={() => {
-                setFinalLocation("")}
-            }
-        >
-            ×
-        </button>
-        </div>
-    </Form.Group>
-    </div>
-</Form>
-
-    <div className="time-section">
-
-        <div className="time-section-header">
-            <span className="time-icon">◷</span>
-            <span>Trip Timing</span>
-        </div>
-
-        <ForecastDaySelector
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-        />
-
-        <div className="time-picker-row">
-
-            {/* Departure Time */}
-            <div className="time-field-group">
-                <label htmlFor="departureTime">
-                    Departure Time
-                </label>
-
-                <input
-                    id="departureTime"
-                    type="time"
-                    step="300"
-                    className="departure-time-input"
-                    value={departureTime}
-                    onChange={(e) => setDepartureTime(e.target.value)}
-                    onPointerDown={(e) => {
-                        if (e.currentTarget.showPicker) {
-                        e.currentTarget.showPicker();
-                        }
-                    }}
-                />
-            </div>
-
-
-            {/* Forecast Interval */}
-            <div className="interval-group">
-                <span className="interval-label">
-                    Forecast Every
-                </span>
-
-                <div className="interval-chips">
-
-                    {[15, 30, 45, 60].map((minutes) => (
-                        <button
-                            key={minutes}
-                            type="button"
-                            className={`interval-chip ${
-                                inputInterval === minutes ? "active" : ""
-                            }`}
-                            onClick={() => setInterval(minutes)}
-                        >
-                            {minutes === 60
-                                ? "1 hour"
-                                : `${minutes} min`}
-                        </button>
-                    ))}
+                    <img
+                        src={`${import.meta.env.BASE_URL}header_icon.png`}
+                        alt="header_icon"
+                        className="route-radar-icon"
+                    />
 
                 </div>
+
+
+                <div className="route-radar-text">
+
+                    <h1>
+                        Route Radar
+                    </h1>
+
+                    <h2>
+                        Know Your Route Before You Go.
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div className="forecast-form-card">
+
+
+                {/* ONE FORM NOW HANDLES ENTER / SUBMIT */}
+
+                <Form
+                    className="route-form"
+                    onSubmit={getRoute}
+                >
+
+                    <div className="address-row">
+
+
+                        {/* STARTING ADDRESS */}
+
+                        <Form.Group className="route-field">
+
+                            <Form.Label htmlFor="startLocation">
+                                Starting Address
+                            </Form.Label>
+
+
+                            <div className="autocomplete-container">
+
+                                <div className="route-input-wrapper">
+
+                                    <div className="route-input-icon">
+
+                                        <img
+                                            src="/p0/starting_icon.png"
+                                            alt="starting_icon"
+                                        />
+
+                                    </div>
+
+
+                                    <Form.Control
+                                        id="startLocation"
+                                        className="route-input"
+                                        placeholder="Enter starting address"
+                                        value={startLocation}
+                                        autoComplete="off"
+
+                                        role="combobox"
+
+                                        aria-expanded={
+                                            startSuggestions.length > 0
+                                        }
+
+                                        aria-controls="start-suggestions"
+
+                                        aria-activedescendant={
+                                            startActiveIndex >= 0
+                                                ? `start-suggestion-${startActiveIndex}`
+                                                : undefined
+                                        }
+
+                                        onChange={(e) => {
+
+                                            setStartLocation(
+                                                e.target.value
+                                            );
+
+                                            setSelectedStart(null);
+                                            setStartActiveIndex(-1);
+                                        }}
+
+                                        onKeyDown={
+                                            handleStartKeyDown
+                                        }
+                                    />
+
+
+                                    <button
+                                        type="button"
+                                        className="route-clear-button"
+                                        aria-label="Clear starting address"
+
+                                        tabIndex={-1}
+
+                                        onClick={() => {
+
+                                            setStartLocation("");
+
+                                            setStartSuggestions([]);
+
+                                            setSelectedStart(null);
+
+                                            setStartActiveIndex(-1);
+                                        }}
+                                    >
+                                        ×
+                                    </button>
+
+                                </div>
+
+
+                                {startSuggestions.length > 0 && (
+
+                                    <div
+                                        id="start-suggestions"
+                                        className="address-suggestions"
+                                        role="listbox"
+                                    >
+
+                                        {startSuggestions.map(
+                                            (suggestion, index) => (
+
+                                                <button
+                                                    id={`start-suggestion-${index}`}
+                                                    key={suggestion.id}
+                                                    type="button"
+                                                    role="option"
+
+                                                    tabIndex={-1}
+
+                                                    aria-selected={
+                                                        index === startActiveIndex
+                                                    }
+
+                                                    className={
+                                                        `address-suggestion ${
+                                                            index === startActiveIndex
+                                                                ? "active"
+                                                                : ""
+                                                        }`
+                                                    }
+
+                                                    onMouseEnter={() =>
+                                                        setStartActiveIndex(
+                                                            index
+                                                        )
+                                                    }
+
+                                                    onClick={() =>
+                                                        selectStartSuggestion(
+                                                            suggestion
+                                                        )
+                                                    }
+                                                >
+
+                                                    <span
+                                                        className="suggestion-icon"
+                                                        aria-hidden="true"
+                                                    >
+                                                        📍
+                                                    </span>
+
+
+                                                    <span className="suggestion-text">
+                                                        {suggestion.place_name}
+                                                    </span>
+
+                                                </button>
+                                            )
+                                        )}
+
+                                    </div>
+                                )}
+
+                            </div>
+
+                        </Form.Group>
+
+
+                        {/* DESTINATION */}
+
+                        <Form.Group className="route-field">
+
+                            <Form.Label htmlFor="finalLocation">
+                                Destination
+                            </Form.Label>
+
+
+                            <div className="autocomplete-container">
+
+                                <div className="route-input-wrapper">
+
+                                    <div className="route-input-icon">
+
+                                        <img
+                                            src="/p0/dest_icon.png"
+                                            alt="dest_icon"
+                                        />
+
+                                    </div>
+
+
+                                    <Form.Control
+                                        id="finalLocation"
+                                        className="route-input"
+                                        placeholder="Enter destination"
+                                        value={finalLocation}
+                                        autoComplete="off"
+
+                                        role="combobox"
+
+                                        aria-expanded={
+                                            finalSuggestions.length > 0
+                                        }
+
+                                        aria-controls="final-suggestions"
+
+                                        aria-activedescendant={
+                                            finalActiveIndex >= 0
+                                                ? `final-suggestion-${finalActiveIndex}`
+                                                : undefined
+                                        }
+
+                                        onChange={(e) => {
+
+                                            setFinalLocation(
+                                                e.target.value
+                                            );
+
+                                            setSelectedFinal(null);
+                                            setFinalActiveIndex(-1);
+                                        }}
+
+                                        onKeyDown={
+                                            handleFinalKeyDown
+                                        }
+                                    />
+
+
+                                    <button
+                                        type="button"
+                                        className="route-clear-button"
+                                        aria-label="Clear destination"
+
+                                        tabIndex={-1}
+
+                                        onClick={() => {
+
+                                            setFinalLocation("");
+
+                                            setFinalSuggestions([]);
+
+                                            setSelectedFinal(null);
+
+                                            setFinalActiveIndex(-1);
+                                        }}
+                                    >
+                                        ×
+                                    </button>
+
+                                </div>
+
+
+                                {finalSuggestions.length > 0 && (
+
+                                    <div
+                                        id="final-suggestions"
+                                        className="address-suggestions"
+                                        role="listbox"
+                                    >
+
+                                        {finalSuggestions.map(
+                                            (suggestion, index) => (
+
+                                                <button
+                                                    id={`final-suggestion-${index}`}
+                                                    key={suggestion.id}
+                                                    type="button"
+                                                    role="option"
+
+                                                    tabIndex={-1}
+
+                                                    aria-selected={
+                                                        index === finalActiveIndex
+                                                    }
+
+                                                    className={
+                                                        `address-suggestion ${
+                                                            index === finalActiveIndex
+                                                                ? "active"
+                                                                : ""
+                                                        }`
+                                                    }
+
+                                                    onMouseEnter={() =>
+                                                        setFinalActiveIndex(
+                                                            index
+                                                        )
+                                                    }
+
+                                                    onClick={() =>
+                                                        selectFinalSuggestion(
+                                                            suggestion
+                                                        )
+                                                    }
+                                                >
+
+                                                    <span
+                                                        className="suggestion-icon"
+                                                        aria-hidden="true"
+                                                    >
+                                                        📍
+                                                    </span>
+
+
+                                                    <span className="suggestion-text">
+                                                        {suggestion.place_name}
+                                                    </span>
+
+                                                </button>
+                                            )
+                                        )}
+
+                                    </div>
+                                )}
+
+                            </div>
+
+                        </Form.Group>
+
+                    </div>
+
+
+                    {/* TRIP TIMING */}
+
+                    <div className="time-section">
+
+                        <div className="time-section-header">
+
+                            <span className="time-icon">
+                                ◷
+                            </span>
+
+                            <span>
+                                Trip Timing
+                            </span>
+
+                        </div>
+
+
+                        <ForecastDaySelector
+                            selectedDate={selectedDate}
+                            onSelectDate={setSelectedDate}
+                        />
+
+
+                        <div className="time-picker-row">
+
+
+                            <div className="time-field-group">
+
+                                <label htmlFor="departureTime">
+                                    Departure Time
+                                </label>
+
+
+                                <input
+                                    id="departureTime"
+                                    type="time"
+                                    step="300"
+                                    className="departure-time-input"
+                                    value={departureTime}
+
+                                    onChange={(e) =>
+                                        setDepartureTime(
+                                            e.target.value
+                                        )
+                                    }
+
+                                    onPointerDown={(e) => {
+
+                                        if (
+                                            e.currentTarget.showPicker
+                                        ) {
+
+                                            e.currentTarget.showPicker();
+                                        }
+                                    }}
+                                />
+
+                            </div>
+
+
+                            <div className="interval-group">
+
+                                <span className="interval-label">
+                                    Forecast Every
+                                </span>
+
+
+                                <div className="interval-chips">
+
+                                    {[15, 30, 45, 60].map(
+                                        minutes => (
+
+                                            <button
+                                                key={minutes}
+                                                type="button"
+
+                                                className={`interval-chip ${
+                                                    inputInterval === minutes
+                                                        ? "active"
+                                                        : ""
+                                                }`}
+
+                                                onClick={() =>
+                                                    setInterval(minutes)
+                                                }
+                                            >
+
+                                                {minutes === 60
+                                                    ? "1 hour"
+                                                    : `${minutes} min`
+                                                }
+
+                                            </button>
+                                        )
+                                    )}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div className="action-buttons">
+
+
+                            {/* SUBMIT BUTTON */}
+
+                            <button
+                                type="submit"
+                                className="action-button primary"
+                            >
+
+                                <span>
+                                    ➤
+                                </span>
+
+                                Let's Go!
+
+                            </button>
+
+
+                            <button
+                                type="button"
+                                className="action-button secondary"
+                                onClick={resetFields}
+                            >
+
+                                <span>
+                                    ↻
+                                </span>
+
+                                Reset
+
+                            </button>
+
+                        </div>
+
+
+                        <div className="routes-scroll">
+
+                            {!isLoading ? (
+
+                                routes.map(
+                                    (route, index) => (
+
+                                        <RouteCard
+                                            key={index}
+                                            routeNumber={index + 1}
+                                            forecastEntries={
+                                                route.forecastEntries
+                                            }
+                                        />
+
+                                    )
+                                )
+
+                            ) : (
+
+                                <p className="loading-text">
+                                    Loading Forecast ...
+                                </p>
+                            )}
+
+                        </div>
+
+                    </div>
+
+                </Form>
+
             </div>
 
         </div>
-
-            <div className="action-buttons">
-            {/* <button className="action-button secondary" onClick={addTimes}>
-                <span>＋</span>
-                Add A New Time
-            </button> */}
-
-            <button className="action-button primary" onClick={getRoute}>
-                <span>➤</span>
-                Let's Go!
-            </button>
-
-            <button className="action-button secondary" onClick={resetFields}>
-                <span>↻</span>
-                Reset
-            </button>
-        </div>
-
-       <div className="routes-scroll">
-    {!isLoading ? (
-        routes.map((route, index) => (
-            <RouteCard
-                key={index}
-                routeNumber={index + 1}
-                forecastEntries={route.forecastEntries}
-            />
-        ))
-    ) : (
-        <p className="loading-text">Loading Forecast ...</p>
-    )}
-</div>
-    </div>
-    </div>
-    </div>
-
-    
+    );
 }
