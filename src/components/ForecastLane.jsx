@@ -3049,7 +3049,7 @@ export default function ForecastLane() {
                                                                 <div className="route-input-icon">
 
                                                                     <img
-                                                                        src="/p0/starting_icon.png"
+                                                                        src="/starting_icon.png"
                                                                         alt=""
                                                                     />
 
@@ -3214,7 +3214,7 @@ export default function ForecastLane() {
                                                                 <div className="route-input-icon">
 
                                                                     <img
-                                                                        src="/p0/dest_icon.png"
+                                                                        src="/dest_icon.png"
                                                                         alt=""
                                                                     />
 
